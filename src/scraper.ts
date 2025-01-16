@@ -1,4 +1,3 @@
-// Import required Deno modules
 import { DOMParser } from "deno_dom";
 import { encodeBase64 } from "base64";
 import nodemailer from "nodemailer";
@@ -20,10 +19,8 @@ const config = _config.config;
 
 await loadEnv({ export: true });
 
-// Store for already seen projects
 const seenProjects = new Set<string>();
 
-// Types
 interface Project {
   title: string;
   description: string;
@@ -32,7 +29,6 @@ interface Project {
   keywords: string[];
 }
 
-// Email configuration
 const transporter = nodemailer.createTransport({
   host: Deno.env.get("SMTP_HOST"),
   port: Number.parseInt(Deno.env.get("SMTP_PORT") ?? "0"),
@@ -61,22 +57,20 @@ async function sendEmail(projects: Project[]) {
       .join("\n---\n\n");
 
     await transporter.sendMail({
-      from: "bot@mail.innovation-through-understanding.de",
+      from: Deno.env.get("SMTP_FROM"),
       to: config.targetEmail!,
       subject: `Neue passende Projekte gefunden (${projects.length})`,
       text: emailContent,
       html: "<pre>" + emailContent + "</pre>",
     });
-
-    console.log("E-Mail wurde erfolgreich versendet");
   } catch (error) {
-    console.error("Fehler beim E-Mail-Versand:", error);
+    console.error("Error sending emails:", error);
   }
 }
 
 async function scrapeProjects(): Promise<void> {
   const result: Project[][] = await Promise.all(
-    Array.from({ length: config.pages }, (_, i) => i).map((page) =>
+    Array.from({ length: config.pages }, (_, i) => i + 1).map((page) =>
       scrapePage(page)
     )
   );
@@ -84,14 +78,16 @@ async function scrapeProjects(): Promise<void> {
   const matchedProjects = result.flat();
 
   if (matchedProjects.length > 0) {
-    console.log(`\n${matchedProjects.length} Neue passende Projekte gefunden.`);
+    console.log(
+      `\n${matchedProjects.length} matching new projects were found.`
+    );
 
     if (config.enableEmail) {
       await sendEmail(matchedProjects);
-      console.log("E-Mail wurde versendet.");
+      console.log("Sent email.");
     }
   } else {
-    console.log("Keine neuen passenden Projekte gefunden.");
+    console.log("No new projects were found.");
   }
 }
 
@@ -118,7 +114,7 @@ async function scrapePage(page: number): Promise<Project[]> {
     const document = parser.parseFromString(html, "text/html");
 
     if (!document) {
-      throw new Error("Konnte Dokument nicht parsen");
+      throw new Error("Unable to parse website");
     }
 
     const projectCards = document.querySelectorAll(".project-container");
@@ -166,19 +162,16 @@ async function scrapePage(page: number): Promise<Project[]> {
 
     return matchedProjects;
   } catch (error) {
-    console.error("Fehler beim Scraping:", error);
+    console.error("Error on scraping:", error);
     return [];
   }
 }
 
-// Hauptprogramm
-console.log("Starte Project Scanner...");
-console.log("Bereits gesehene Projekte:", seenProjects.size);
-await scrapeProjects(); // Initial scan
+console.log("Starting scraper...");
+await scrapeProjects();
 
-// Periodischer Scan
 setInterval(async () => {
-  console.log("\nFühre periodischen Scan durch...");
-  console.log("Bereits gesehene Projekte:", seenProjects.size);
+  console.log("\nPerforming periodic scan...");
+  console.log("Number of known projects since start:", seenProjects.size);
   await scrapeProjects();
 }, config.scanInterval * 1000 * 60);

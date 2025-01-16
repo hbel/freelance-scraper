@@ -15,10 +15,10 @@
     },
     "imports": {
       "deno_dom": "https://deno.land/x/deno_dom@v0.1.49/deno-dom-wasm.ts",
-      "base64": "https://deno.land/std/encoding/base64.ts",
+      "base64": "https://deno.land/std@0.224.0/encoding/base64.ts",
       "nodemailer": "npm:nodemailer@6.9.16",
-      "dotenv": "https://deno.land/std/dotenv/mod.ts",
-      "yaml": "https://deno.land/std/yaml/mod.ts"
+      "dotenv": "https://deno.land/std@0.224.0/dotenv/mod.ts",
+      "yaml": "https://deno.land/std@0.224.0/yaml/mod.ts"
     },
     "lint": {
       "rules": {
