@@ -1,0 +1,12 @@
+config:
+  targetUrl: "https://www.freelancermap.de/projektboerse.html?created=1&projectContractTypes%5B0%5D=contracting&countries%5B%5D=1&sort=1&pagenr="
+  pages: 3 
+  scanInterval: 5
+  enableEmail: true
+  targetEmail: "foo@bar.de"
+  keywords: 
+    - java
+    - c#
+    - spring
+    - asp.net
+  
