@@ -1,10 +1,12 @@
 config:
   targetUrl: "https://www.freelancermap.de/projektboerse.html?created=1&projectContractTypes%5B0%5D=contracting&countries%5B%5D=1&sort=1&pagenr="
-  pages: 3 
-  scanInterval: 5
-  enableEmail: true
-  targetEmail: "foo@bar.de"
-  keywords: 
+  pages: 3 # Listing pages to check
+  scanInterval: 5 # In minutes
+  enableEmail: true # Send found projects to mail account (Make sure SMTP is configured via .env file)
+  targetEmail: "foo@bar.de" # Email to receive messages
+  enableChat: false # Send found projects to rocket chat account (Make sure ROCKETCHAT is configured via .env file)
+  chatUser: "foo.bar" # Rocket chat user name to receive messages
+  keywords: # Keywords to search for in the project description
     - java
     - c#
     - spring

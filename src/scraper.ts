@@ -1,72 +1,17 @@
 import { DOMParser } from "deno_dom";
-import { encodeBase64 } from "base64";
-import nodemailer from "nodemailer";
-import { parse } from "yaml";
 import { load as loadEnv } from "dotenv";
-
-interface Config {
-  targetUrl: string;
-  pages: number;
-  scanInterval: number;
-  enableEmail: boolean;
-  targetEmail?: string;
-  keywords: string[];
-}
-
-const yamlConfig = await Deno.readTextFile("./config.yaml");
-const _config = parse(yamlConfig) as { config: Config };
-const config = _config.config;
+import { Cache } from "./Cache.ts";
+import { Project } from "./Project.ts";
+import { config } from "./Config.ts";
 
 await loadEnv({ export: true });
 
-const seenProjects = new Set<string>();
+const RocketChat = config.enableRocketChat
+  ? await import("./rocketChatApi.ts")
+  : undefined;
+const Mailer = config.enableEmail ? await import("./mailer.ts") : undefined;
 
-interface Project {
-  title: string;
-  description: string;
-  link: string;
-  hash: string;
-  keywords: string[];
-}
-
-const transporter = nodemailer.createTransport({
-  host: Deno.env.get("SMTP_HOST"),
-  port: Number.parseInt(Deno.env.get("SMTP_PORT") ?? "0"),
-  secure: Deno.env.get("SMTP_USE_TLS") === "true",
-  auth: {
-    user: Deno.env.get("SMTP_USERNAME"),
-    pass: Deno.env.get("SMTP_PASSWORD"),
-  },
-});
-
-function generateHash(title: string, description: string): string {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(title + description);
-  return encodeBase64(data);
-}
-
-async function sendEmail(projects: Project[]) {
-  try {
-    const emailContent = projects
-      .map(
-        (project) =>
-          `Titel: ${project.title}\nLink: ${
-            project.link
-          }\nKeywords: ${project.keywords.join(", ")}\n`
-      )
-      .join("\n---\n\n");
-
-    await transporter.sendMail({
-      from: Deno.env.get("SMTP_FROM"),
-      to: config.targetEmail!,
-      subject: `Neue passende Projekte gefunden (${projects.length})`,
-      text: emailContent,
-      html: "<pre>" + emailContent + "</pre>",
-    });
-  } catch (error) {
-    console.error("Error sending emails:", error);
-  }
-}
+const cache = await Cache.create();
 
 async function scrapeProjects(): Promise<void> {
   const result: Project[][] = await Promise.all(
@@ -83,9 +28,14 @@ async function scrapeProjects(): Promise<void> {
     );
 
     if (config.enableEmail) {
-      await sendEmail(matchedProjects);
+      await Mailer?.sendEmail(matchedProjects);
       console.log("Sent email.");
     }
+    if (config.enableRocketChat) {
+      await RocketChat?.sendMessages(matchedProjects);
+      console.log("Sent chat message");
+    }
+    cache.saveCache();
   } else {
     console.log("No new projects were found.");
   }
@@ -133,10 +83,10 @@ async function scrapePage(page: number): Promise<Project[]> {
         ? link
         : `https://www.freelancermap.de${link}`;
 
-      const hash = generateHash(title, description);
+      const hash = cache.generateHash(title, description);
 
       // Skip if we've seen this project before
-      if (seenProjects.has(hash)) {
+      if (cache.has(hash)) {
         return;
       }
 
@@ -154,7 +104,7 @@ async function scrapePage(page: number): Promise<Project[]> {
             hash,
             keywords: [keyword],
           });
-          seenProjects.add(hash);
+          cache.add(hash);
           break;
         }
       }
@@ -172,6 +122,6 @@ await scrapeProjects();
 
 setInterval(async () => {
   console.log("\nPerforming periodic scan...");
-  console.log("Number of known projects since start:", seenProjects.size);
+
   await scrapeProjects();
 }, config.scanInterval * 1000 * 60);
