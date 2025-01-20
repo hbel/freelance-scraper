@@ -1,7 +1,7 @@
 {
     "tasks": {
-      "start": "deno run --allow-net --allow-read --allow-write --allow-env src/scraper.ts",
-      "dev": "deno run --watch --allow-net --allow-read --allow-write --allow-env src/scraper.ts"
+      "start": "deno run --allow-net --allow-read --allow-write --allow-env --deny-sys src/scraper.ts",
+      "dev": "deno run --watch --allow-net --allow-read --allow-write --allow-env --deny-sys src/scraper.ts"
     },
     "fmt": {
       "options": {
