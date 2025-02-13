@@ -111,10 +111,18 @@ async function scrapePage(page: number): Promise<Project[]> {
 }
 
 console.log("Starting scraper...");
-await scrapeProjects();
+try {
+    await scrapeProjects();
+} catch (error) {
+    console.error(error);
+}
 
 setInterval(async () => {
     console.log("\nPerforming periodic scan...");
 
-    await scrapeProjects();
+    try {
+        await scrapeProjects();
+    } catch (error) {
+        console.error(error);
+    }
 }, config.scanInterval * 1000 * 60);
